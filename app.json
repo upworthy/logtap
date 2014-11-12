@@ -1,0 +1,12 @@
+{
+  "name": "Logtap Demo",
+  "description": "Heroku syslog drain processing demo",
+  "keywords": [
+    "Logplex",
+    "infrastructure",
+    "syslog"
+  ],
+  "env": {
+    "BUILDPACK_URL": "https://github.com/kr/heroku-buildpack-go.git"
+  }
+}
