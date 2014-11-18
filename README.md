@@ -22,11 +22,9 @@ received from `acme-www-prod`:
 
     $ hk log -a serene-wookie-1234 -s app
     ...
-    2014-11-14T06:26:43 app[web.1]: load_avg_1m: p50=0.56      p99=2.41      n=587
     2014-11-14T06:26:43 app[web.1]:     service: p50=23.00     p99=334.00    n=492
     2014-11-14T06:26:43 app[web.1]:     connect: p50=1.00      p99=6.00      n=492
     2014-11-14T06:26:43 app[web.1]:         rps: p50=51.00     p99=64.00     n=60
-    2014-11-14T06:26:53 app[web.1]: load_avg_1m: p50=0.56      p99=2.41      n=589
     2014-11-14T06:26:53 app[web.1]:     service: p50=24.00     p99=317.00    n=474
     2014-11-14T06:26:53 app[web.1]:     connect: p50=1.00      p99=5.00      n=474
     2014-11-14T06:26:53 app[web.1]:         rps: p50=51.00     p99=64.00     n=70
