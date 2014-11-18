@@ -1,0 +1,17 @@
+{
+	"ImportPath": "github.com/upworthy/logtap",
+	"GoVersion": "go1.3.3",
+	"Packages": [
+		"./logtapdemo"
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/bmizerany/perks/quantile",
+			"Rev": "6cb9d9d729303ee2628580d9aec5db968da3a607"
+		},
+		{
+			"ImportPath": "github.com/kr/secureheader",
+			"Rev": "fe404e1dcc916e0dcd492b49fff6c7adc4381fad"
+		}
+	]
+}
