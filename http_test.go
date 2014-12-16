@@ -29,46 +29,6 @@ func TestContextGetters(t *testing.T) {
 	}
 }
 
-type aContextGetter struct{}
-
-func (aContextGetter) GetContext(r *http.Request) (interface{}, error) {
-	return nil, nil
-}
-
-func TestNewHandler(t *testing.T) {
-	expect := map[string]interface{}{}
-	f := func(x *SyslogMessage) {
-		expect["f-called"] = x
-	}
-	cg1 := func(*http.Request) (interface{}, error) {
-		expect["cg1-called"] = true
-		return nil, nil
-	}
-	tele := DiscardTelemetry
-	h := NewHandler(nil)
-	h2 := h.SetOptions(cg1, tele, f)
-	if h != h2 {
-		t.Error("h != h2")
-	}
-	if h.Telemetry != tele {
-		t.Error("h.Telemetry != tele")
-	}
-	h.ContextGetter.GetContext(nil)
-	if _, ok := expect["cg1-called"]; !ok {
-		t.Error("cg1 was never called!")
-	}
-	sm := &SyslogMessage{}
-	h.F(sm)
-	if actual, ok := expect["f-called"]; !ok || actual != sm {
-		t.Error("f was never called!")
-	}
-	cg2 := aContextGetter{}
-	h.SetOptions(cg2)
-	if h.ContextGetter != cg2 {
-		t.Error("h.ContextGetter != cg2")
-	}
-}
-
 func TestHandlerServeHTTP(t *testing.T) {
 	utc, _ := time.LoadLocation("UTC")
 	d := strings.NewReader(
@@ -80,7 +40,8 @@ func TestHandlerServeHTTP(t *testing.T) {
 	w := httptest.NewRecorder()
 	var actual *SyslogMessage
 	f := func(m *SyslogMessage) { actual = m }
-	h := NewHandler(f).SetOptions(DiscardTelemetry, NilContext)
+	h := NewHandler(f)
+	h.Telemetry = DiscardTelemetry
 	h.ServeHTTP(w, r)
 	if w.Code != 200 {
 		t.Fatal("HTTP status != 200")
@@ -106,7 +67,8 @@ func TestHandlerServeHTTPFailsWithoutContext(t *testing.T) {
 	r, _ := http.NewRequest("POST", "https://logtap.example.org/", d)
 	w := httptest.NewRecorder()
 	f := func(*SyslogMessage) {}
-	h := NewHandler(f).SetOptions(GetAppName)
+	h := NewHandler(f)
+	h.ContextGetter = ContextFunc(GetAppName)
 	h.ServeHTTP(w, r)
 	if w.Code != http.StatusTeapot {
 		t.Fatal("HTTP status != StatusTeapot")

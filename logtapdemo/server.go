@@ -79,7 +79,10 @@ func main() {
 	go quantify("connect", 10*time.Second, inputs["connect"])
 	go quantify("rps", 10*time.Second, rps)
 
-	go http.Handle("/", logtap.NewHandler(f).SetOptions(logtap.NilContext, logtap.DiscardTelemetry))
+	h := logtap.NewHandler(f)
+	h.ContextGetter = logtap.ContextFunc(logtap.NilContext)
+	h.Telemetry = logtap.DiscardTelemetry
+	http.Handle("/", h)
 	secureheader.DefaultConfig.PermitClearLoopback = permitClearLoopback
 	log.Fatal(http.ListenAndServe(net.JoinHostPort(bindAddr, os.Getenv("PORT")), secureheader.DefaultConfig))
 }

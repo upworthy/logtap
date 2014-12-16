@@ -64,8 +64,8 @@ func GetAppName(r *http.Request) (interface{}, error) {
 //
 // Each syslog message will be enriched with "context" data derived
 // from HTTP request. By default, Context field of each syslog message
-// will be set to the value of 'app' query string argument. Context
-// may be arbitrarily customized by setting ContextGetter field.
+// will be set to nil. Context may be arbitrarily customized by
+// setting ContextGetter field.
 //
 // Handler reports its operational state via Telemetry. Telemetry
 // field may be set to customize how telemetry data is processed. Two
@@ -82,27 +82,10 @@ type Handler struct {
 func NewHandler(f func(*SyslogMessage)) *Handler {
 	h := Handler{
 		LogTelemetry,
-		ContextFunc(GetAppName),
+		ContextFunc(NilContext),
 		f,
 	}
 	return &h
-}
-
-// SetOptions customizes the Handler.
-func (h *Handler) SetOptions(opts ...interface{}) *Handler {
-	for _, o := range opts {
-		switch o := o.(type) {
-		case Telemetry:
-			h.Telemetry = o
-		case func(*http.Request) (interface{}, error):
-			h.ContextGetter = ContextFunc(o)
-		case ContextGetter:
-			h.ContextGetter = o
-		case func(*SyslogMessage):
-			h.F = o
-		}
-	}
-	return h
 }
 
 // ServeHTTP implements the log tapping endpoint logic.
