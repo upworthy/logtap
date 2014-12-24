@@ -8,8 +8,8 @@ import (
 
 // Telemetry is the interface that represents a telemetry receiver.
 type Telemetry interface {
-	Value(value interface{}, name string)
-	Count(value int, name string)
+	Value(value interface{}, name string, props ...interface{})
+	Count(value int, name string, props ...interface{})
 }
 
 type discardTelemetry struct{}
@@ -17,8 +17,8 @@ type discardTelemetry struct{}
 // DiscardTelemetry discards telemetry data.
 var DiscardTelemetry = &discardTelemetry{}
 
-func (*discardTelemetry) Value(value interface{}, name string) {}
-func (*discardTelemetry) Count(value int, name string)         {}
+func (*discardTelemetry) Value(value interface{}, name string, props ...interface{}) {}
+func (*discardTelemetry) Count(value int, name string, props ...interface{})         {}
 
 type logTelemetry struct{}
 
@@ -44,10 +44,10 @@ func printAppMetric(key string, value interface{}, name string) {
 	log.Print(fmt.Sprintf(`APP_METRIC {"stat": %s, "%s": %s}`, n, key, v))
 }
 
-func (*logTelemetry) Value(value interface{}, name string) {
+func (*logTelemetry) Value(value interface{}, name string, props ...interface{}) {
 	printAppMetric("value", value, name)
 }
 
-func (*logTelemetry) Count(value int, name string) {
+func (*logTelemetry) Count(value int, name string, props ...interface{}) {
 	printAppMetric("count", value, name)
 }
