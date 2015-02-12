@@ -4,6 +4,7 @@ package logtap
 
 import (
 	"errors"
+	"github.com/upworthy/go-telemetry"
 	"log"
 	"net/http"
 	"strconv"
@@ -67,12 +68,10 @@ func GetAppName(r *http.Request) (interface{}, error) {
 // will be set to nil. Context may be arbitrarily customized by
 // setting ContextGetter field.
 //
-// Handler reports its operational state via Telemetry. Telemetry
-// field may be set to customize how telemetry data is processed. Two
-// canned Telemetry implementations are offered: DiscardTelemetry and
-// LogTelemetry (the default one that uses the standard Go logging).
+// Handler reports its operational state via Metrics. Metrics field
+// may be set to customize how telemetry data is processed.
 type Handler struct {
-	Telemetry
+	telemetry.Metrics
 	ContextGetter
 	F func(*SyslogMessage)
 }
@@ -81,7 +80,7 @@ type Handler struct {
 // will invoke f for each received syslog message.
 func NewHandler(f func(*SyslogMessage)) *Handler {
 	h := Handler{
-		LogTelemetry,
+		telemetry.LogMetrics,
 		ContextFunc(NilContext),
 		f,
 	}
@@ -92,7 +91,7 @@ func NewHandler(f func(*SyslogMessage)) *Handler {
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if ctx, err := h.ContextGetter.GetContext(r); err != nil {
 		http.Error(w, err.Error(), http.StatusTeapot)
-		h.Telemetry.Count(1, "context error")
+		h.Count(1, "context error")
 	} else {
 		var results []SyslogResult
 		expectedCount, _ := strconv.Atoi(r.Header.Get("Logplex-Msg-Count"))
@@ -106,17 +105,17 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				result.Message.Context = ctx
 				h.F(result.Message)
 				i++
-				h.Telemetry.Value(time.Since(result.Message.Timestamp).Seconds(), "time lag")
+				h.Value(time.Since(result.Message.Timestamp).Seconds(), "time lag")
 			} else {
 				log.Print(result.Err)
 			}
 		}
-		h.Telemetry.Count(1, "request")
+		h.Count(1, "request")
 		if expectedCount > 0 {
 			if i != expectedCount {
 				log.Printf("Logplex-Msg-Count is %v, but %v messages have been read", expectedCount, i)
 			}
-			h.Telemetry.Value(expectedCount-i, "message count delta")
+			h.Value(expectedCount-i, "message count delta")
 		}
 	}
 }

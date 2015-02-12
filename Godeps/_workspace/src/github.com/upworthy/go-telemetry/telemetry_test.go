@@ -1,4 +1,4 @@
-package logtap
+package telemetry
 
 import (
 	"bufio"
@@ -8,16 +8,16 @@ import (
 	"testing"
 )
 
-func TestLogTelemetry(t *testing.T) {
+func TestLogMetrics(t *testing.T) {
 	buf := &bytes.Buffer{}
 	log.SetFlags(0)
 	log.SetOutput(buf)
-	LogTelemetry.Value(3.14, "Pi")
-	LogTelemetry.Value(-17, "foo")
-	LogTelemetry.Count(42, "the answer")
-	LogTelemetry.Count(1, "love")
-	LogTelemetry.Count(1, "life")
-	LogTelemetry.Value("not a good value!", "BAD")
+	LogMetrics.Value(3.14, "Pi")
+	LogMetrics.Value(-17, "foo")
+	LogMetrics.Count(42, "the answer")
+	LogMetrics.Count(1, "love")
+	LogMetrics.Count(1, "life")
+	LogMetrics.Value("not a good value!", "BAD")
 	s := bufio.NewScanner(buf)
 	var actual []string
 	for s.Scan() {

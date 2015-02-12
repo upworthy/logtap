@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/bmizerany/perks/quantile"
 	"github.com/kr/secureheader"
+	"github.com/upworthy/go-telemetry"
 	"github.com/upworthy/logtap"
 	"log"
 	"net"
@@ -81,7 +82,7 @@ func main() {
 
 	h := logtap.NewHandler(f)
 	h.ContextGetter = logtap.ContextFunc(logtap.NilContext)
-	h.Telemetry = logtap.DiscardTelemetry
+	h.Metrics = telemetry.Discard
 	http.Handle("/", h)
 	secureheader.DefaultConfig.PermitClearLoopback = permitClearLoopback
 	log.Fatal(http.ListenAndServe(net.JoinHostPort(bindAddr, os.Getenv("PORT")), secureheader.DefaultConfig))

@@ -1,6 +1,7 @@
 package logtap
 
 import (
+	"github.com/upworthy/go-telemetry"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -41,7 +42,7 @@ func TestHandlerServeHTTP(t *testing.T) {
 	var actual *SyslogMessage
 	f := func(m *SyslogMessage) { actual = m }
 	h := NewHandler(f)
-	h.Telemetry = DiscardTelemetry
+	h.Metrics = telemetry.Discard
 	h.ServeHTTP(w, r)
 	if w.Code != 200 {
 		t.Fatal("HTTP status != 200")
