@@ -25,7 +25,6 @@ type SyslogMessage struct {
 	Procid    string
 	Msgid     string
 	Text      string
-	Context   interface{}
 	// Heroku syslog data lacks STRUCTURED-DATA piece (which should be between Msgid and Text)
 }
 
@@ -93,12 +92,6 @@ func ParseSyslogMessage(b []byte) (*SyslogMessage, error) {
 	return &m, nil
 }
 
-// SyslogResult is an outcome of reading a syslog message.
-type SyslogResult struct {
-	Message *SyslogMessage
-	Err     error
-}
-
 // tokenize follows bufio.SplitFunc protocol.
 func tokenize(data []byte, atEOF bool) (int, []byte, error) {
 	if atEOF && len(data) == 0 {
@@ -114,22 +107,28 @@ func tokenize(data []byte, atEOF bool) (int, []byte, error) {
 	return 0, nil, nil
 }
 
-// ReadSyslogMessages returns results of scanning syslog messages from
+// ReadSyslogMessages returns a slice of scanned syslog messages from
 // the specified reader using the syslog TCP protocol octet counting
-// framing method. It appends results to the specified slice, capacity
-// permitting. It returns the updated slice. Basically, it operates on
-// the results slice exactly like built-in 'append' function.
+// framing method. It appends messages to the specified slice,
+// capacity permitting. It returns the updated slice. Basically, it
+// operates on the slice exactly like built-in 'append' function. It
+// also returns a potentially non-empty slice of errors that might
+// have occurred during scanning.
 //
 // See the spec: http://tools.ietf.org/html/draft-gerhards-syslog-plain-tcp-12#section-3.4.1
-func ReadSyslogMessages(results []SyslogResult, r io.Reader) []SyslogResult {
+func ReadSyslogMessages(results []*SyslogMessage, r io.Reader) ([]*SyslogMessage, []error) {
+	var errors []error
 	s := bufio.NewScanner(r)
 	s.Split(tokenize)
 	for s.Scan() {
-		m, err := ParseSyslogMessage(s.Bytes())
-		results = append(results, SyslogResult{m, err})
+		if m, err := ParseSyslogMessage(s.Bytes()); err == nil {
+			results = append(results, m)
+		} else {
+			errors = append(errors, err)
+		}
 	}
 	if err := s.Err(); err != nil {
-		results = append(results, SyslogResult{nil, err})
+		errors = append(errors, err)
 	}
-	return results
+	return results, errors
 }

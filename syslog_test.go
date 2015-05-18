@@ -68,19 +68,13 @@ func TestTokenize(t *testing.T) {
 	}
 }
 
-func TestReadInvalidSyslogMessages(t *testing.T) {
+func testReadInvalidSyslogMessages(t *testing.T) {
 	f := func(b []byte) bool {
-		// property: totally random byte input will always produce
-		// only results with errors.
-		for _, r := range ReadSyslogMessages(nil, bytes.NewBuffer(b)) {
-			if r.Message != nil {
-				t.Error("Unexpected syslog message")
-				return false
-			}
-			if r.Err == nil {
-				t.Error("Unexpected non-error result")
-				return false
-			}
+		// property: totally random byte input will never produce messages.
+		xs, _ := ReadSyslogMessages(nil, bytes.NewBuffer(b))
+		if len(xs) != 0 {
+			t.Errorf("Got %v unexpected syslog messages", len(xs))
+			return false
 		}
 		return true
 	}
@@ -91,48 +85,37 @@ func TestReadInvalidSyslogMessages(t *testing.T) {
 
 func TestReadSyslogMessages(t *testing.T) {
 	utc, _ := time.LoadLocation("UTC")
-	expected := []SyslogResult{
-		{
-			&SyslogMessage{
-				Priority:  "45",
-				Version:   "1",
-				Timestamp: time.Date(2014, 1, 9, 20, 34, 44, 651004000, utc),
-				Hostname:  "host",
-				Appname:   "heroku",
-				Procid:    "api",
-				Msgid:     "-",
-				Text:      "Add ZOMGZOMG config by foo@example.com",
-				Context:   nil},
-			nil,
-		},
-		{
-			&SyslogMessage{
-				Priority:  "45",
-				Version:   "1",
-				Timestamp: time.Date(2014, 1, 9, 20, 34, 44, 693891000, utc),
-				Hostname:  "host",
-				Appname:   "heroku",
-				Procid:    "api",
-				Msgid:     "-",
-				Text:      "Release v1822 created by foo@example.com",
-				Context:   nil},
-			nil,
-		},
+	expected := []*SyslogMessage{
+		&SyslogMessage{
+			Priority:  "45",
+			Version:   "1",
+			Timestamp: time.Date(2014, 1, 9, 20, 34, 44, 651004000, utc),
+			Hostname:  "host",
+			Appname:   "heroku",
+			Procid:    "api",
+			Msgid:     "-",
+			Text:      "Add ZOMGZOMG config by foo@example.com"},
+		&SyslogMessage{
+			Priority:  "45",
+			Version:   "1",
+			Timestamp: time.Date(2014, 1, 9, 20, 34, 44, 693891000, utc),
+			Hostname:  "host",
+			Appname:   "heroku",
+			Procid:    "api",
+			Msgid:     "-",
+			Text:      "Release v1822 created by foo@example.com"},
 	}
-	var actual []SyslogResult
-	for _, r := range ReadSyslogMessages(nil, strings.NewReader(
+	actual, errors := ReadSyslogMessages(nil, strings.NewReader(
 		`95 <45>1 2014-01-09T20:34:44.651004+00:00 host heroku api - Add ZOMGZOMG config by foo@example.com`+
 			`97 <45>1 2014-01-09T20:34:44.693891+00:00 host heroku api - Release v1822 created by foo@example.com`+
-			`zomg bogus`)) {
-		actual = append(actual, r)
+			`zomg bogus`))
+	if len(actual) != len(expected) {
+		t.Errorf("Unexpected number of results: %v", len(actual))
 	}
-	if !reflect.DeepEqual(actual[:2], expected) {
+	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("%#v != %#v", actual, expected)
 	}
-	if actual[2].Message != nil {
-		t.Error("Unexpected syslog message")
-	}
-	if actual[2].Err == nil {
-		t.Error("Unexpected non-error result")
+	if len(errors) != 1 {
+		t.Errorf("Unexpected number of errors: %v", len(errors))
 	}
 }

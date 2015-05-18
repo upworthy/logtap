@@ -39,8 +39,13 @@ func TestHandlerServeHTTP(t *testing.T) {
 	r, _ := http.NewRequest("POST", "https://logtap.example.org/", d)
 	r.Header.Set("Logplex-Msg-Count", "3")
 	w := httptest.NewRecorder()
-	var actual *SyslogMessage
-	f := func(m *SyslogMessage) { actual = m }
+	var actual []*SyslogMessage
+	f := func(xs []*SyslogMessage, ctx interface{}) {
+		actual = xs
+		if ctx != nil {
+			t.Errorf("ctx is not nil!")
+		}
+	}
 	h := NewHandler(f)
 	h.Metrics = telemetry.Discard
 	h.ServeHTTP(w, r)
@@ -56,9 +61,8 @@ func TestHandlerServeHTTP(t *testing.T) {
 		Procid:    "api",
 		Msgid:     "-",
 		Text:      "Release v1822 created by foo@example.com",
-		Context:   nil,
 	}
-	if !reflect.DeepEqual(actual, expected) {
+	if !reflect.DeepEqual(actual[0], expected) {
 		t.Errorf("%#v != %#v", actual, expected)
 	}
 }
@@ -67,7 +71,7 @@ func TestHandlerServeHTTPFailsWithoutContext(t *testing.T) {
 	d := strings.NewReader("97 <45>1 2014-01-09T20:34:44.693891+00:00 host heroku api - Release v1822 created by foo@example.com")
 	r, _ := http.NewRequest("POST", "https://logtap.example.org/", d)
 	w := httptest.NewRecorder()
-	f := func(*SyslogMessage) {}
+	f := func([]*SyslogMessage, interface{}) {}
 	h := NewHandler(f)
 	h.ContextGetter = ContextFunc(GetAppName)
 	h.ServeHTTP(w, r)

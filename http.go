@@ -60,25 +60,23 @@ func GetAppName(r *http.Request) (interface{}, error) {
 //
 // See: https://devcenter.heroku.com/articles/labs-https-drains
 //
-// Each successfully parsed syslog message is passed to the specified
-// function F.
-//
-// Each syslog message will be enriched with "context" data derived
-// from HTTP request. By default, Context field of each syslog message
-// will be set to nil. Context may be arbitrarily customized by
-// setting ContextGetter field.
+// Each successfully parsed syslog message batch is passed to the
+// specified function F along with "context" data derived from HTTP
+// request. By default, context will be nil. Context may be
+// arbitrarily customized by setting ContextGetter field.
 //
 // Handler reports its operational state via Metrics. Metrics field
 // may be set to customize how telemetry data is processed.
 type Handler struct {
 	telemetry.Metrics
 	ContextGetter
-	F func(*SyslogMessage)
+	F func([]*SyslogMessage, interface{})
 }
 
 // NewHandler creates a new instance of the log tapping endpoint that
-// will invoke f for each received syslog message.
-func NewHandler(f func(*SyslogMessage)) *Handler {
+// will invoke f for each successfully parsed batch of syslog
+// messages.
+func NewHandler(f func([]*SyslogMessage, interface{})) *Handler {
 	h := Handler{
 		telemetry.LogMetrics,
 		ContextFunc(NilContext),
@@ -93,29 +91,28 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusTeapot)
 		h.Count(1, "context error")
 	} else {
-		var results []SyslogResult
+		var results []*SyslogMessage
 		expectedCount, _ := strconv.Atoi(r.Header.Get("Logplex-Msg-Count"))
 		if expectedCount > 0 && expectedCount <= 10 {
 			// empirical evidence suggests that the upper bound of messages per Logplex request is 10.
-			results = make([]SyslogResult, 0, expectedCount)
+			results = make([]*SyslogMessage, 0, expectedCount)
 		}
-		i := 0
-		for _, result := range ReadSyslogMessages(results, r.Body) {
-			if result.Err == nil {
-				result.Message.Context = ctx
-				h.F(result.Message)
-				i++
-				h.Value(time.Since(result.Message.Timestamp).Seconds(), "time lag")
-			} else {
-				log.Print(result.Err)
-			}
+		results, errors := ReadSyslogMessages(results, r.Body)
+		if len(results) != 0 {
+			h.F(results, ctx)
+		}
+		for _, x := range results {
+			h.Value(time.Since(x.Timestamp).Seconds(), "time lag")
+		}
+		for _, e := range errors {
+			log.Print(e)
 		}
 		h.Count(1, "request")
 		if expectedCount > 0 {
-			if i != expectedCount {
-				log.Printf("Logplex-Msg-Count is %v, but %v messages have been read", expectedCount, i)
+			if len(results) != expectedCount {
+				log.Printf("Logplex-Msg-Count is %v, but %v messages have been read", expectedCount, len(results))
 			}
-			h.Value(expectedCount-i, "message count delta")
+			h.Value(expectedCount-len(results), "message count delta")
 		}
 	}
 }

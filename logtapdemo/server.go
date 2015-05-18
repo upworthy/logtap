@@ -63,13 +63,15 @@ func main() {
 		"connect": make(chan float64, 10000),
 	}
 
-	f := func(m *logtap.SyslogMessage) {
-		if m.Appname == "heroku" && m.Procid == "router" {
-			requests <- 1
-			for _, match := range timingsPattern.FindAllStringSubmatch(m.Text, -1) {
-				if c, ok := inputs[match[1]]; ok {
-					if v, err := strconv.ParseFloat(match[2], 64); err == nil {
-						c <- v
+	f := func(xs []*logtap.SyslogMessage, _ interface{}) {
+		for _, m := range xs {
+			if m.Appname == "heroku" && m.Procid == "router" {
+				requests <- 1
+				for _, match := range timingsPattern.FindAllStringSubmatch(m.Text, -1) {
+					if c, ok := inputs[match[1]]; ok {
+						if v, err := strconv.ParseFloat(match[2], 64); err == nil {
+							c <- v
+						}
 					}
 				}
 			}
@@ -81,7 +83,6 @@ func main() {
 	go quantify("rps", 10*time.Second, rps)
 
 	h := logtap.NewHandler(f)
-	h.ContextGetter = logtap.ContextFunc(logtap.NilContext)
 	h.Metrics = telemetry.Discard
 	http.Handle("/", h)
 	secureheader.DefaultConfig.PermitClearLoopback = permitClearLoopback
